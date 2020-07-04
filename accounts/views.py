@@ -1,12 +1,14 @@
+from django import forms
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, reverse
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.generic import UpdateView
 
-from .forms import SignUpForm
+from .models import Profile
+from .forms import SignUpForm, UpdateProfileForm, UpdateUserForm
 
 
 def signup(request):
@@ -21,12 +23,29 @@ def signup(request):
     return render(request, 'signup.html', {'form': form})
 
 
-@method_decorator(login_required, name='dispatch')
-class UserUpdateView(UpdateView):
-    model = User
-    fields = ('first_name', 'last_name', 'email', )
-    template_name = 'my_account.html'
-    success_url = reverse_lazy('my_account')
+@login_required
+def update_profile(request):
+    if request.method == 'POST':
+        user = Profile.objects.get(user=request.user)
+        form = UpdateProfileForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse('home'))
+    else:
+        user = Profile.objects.get(user=request.user)
+        form = UpdateProfileForm(instance=user)
+    return render(request, 'update_profile.html', {'form': form})
 
-    def get_object(self):
-        return self.request.user
+
+@login_required
+def update_user(request):
+    if request.method == 'POST':
+        form = UpdateUserForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse('update_profile'))
+    else:
+        form = UpdateUserForm(instance=request.user)
+    return render(request, 'update_user.html', {'form': form})
+
+
